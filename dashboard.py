@@ -157,6 +157,33 @@ folium.GeoJson(tt.to_json(), style_function=lu_style,
                                          maxHeight=380, maxWidth=420)).add_to(lu_layer)
 lu_layer.add_to(m)
 
+# Морфотипы: два категориальных слоя на карте (Spacematrix и «Стрелка»)
+MORPH_PALETTE = ["#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#76b7b2", "#edc948", "#b07aa1", "#ff9da7",
+                 "#9c755f", "#bab0ac"]
+NO_MORPH = {"nan", "None", "", "<NA>"}
+morph_legends = {}
+
+
+def morph_layer(column, name):
+    values = g[column].astype(str)
+    cats = [c for c in values.value_counts().index if c not in NO_MORPH]
+    colors = {c: MORPH_PALETTE[i % len(MORPH_PALETTE)] for i, c in enumerate(cats)}
+    morph_legends[name] = colors
+    data = g[["geometry"]].assign(morph=values.where(~values.isin(NO_MORPH), "нет застройки"))
+
+    def style(feature):
+        return {"fillColor": colors.get(feature["properties"]["morph"], "#e2e8f0"), "color": "#4a5568",
+                "weight": 0.3, "fillOpacity": 0.82}
+
+    layer = folium.FeatureGroup(name=name, show=False)
+    folium.GeoJson(data.to_json(), style_function=style,
+                   tooltip=folium.GeoJsonTooltip(fields=["morph"], aliases=[name])).add_to(layer)
+    layer.add_to(m)
+
+
+morph_layer("spacematrix", "Морфотипы Spacematrix")
+morph_layer("strelka", "Морфотипы «Стрелки»")
+
 if len(schools):
     sch = folium.FeatureGroup(name="Школы (OSM)", show=False)
     for geom in schools.to_crs(4326).geometry:
@@ -180,13 +207,38 @@ lu_osm = [int(osm_counts.get(c, 0)) for c in lu_labels]
 lu_est = [int(est_counts.get(c, 0)) for c in lu_labels]
 lu_osm_total = int((source == "osm").sum())
 lu_est_total = int((source == "buildings").sum())
-sm_counts = blocks["spacematrix"].fillna("нет данных").astype(str).value_counts()
-st_counts = blocks["strelka"].fillna("нет данных").astype(str).value_counts()
+sm_counts = blocks["spacematrix"].astype(str).replace({"nan": "нет застройки", "None": "нет застройки"}).value_counts()
+st_counts = blocks["strelka"].astype(str).replace({"nan": "нет застройки", "None": "нет застройки"}).value_counts()
 provision_bins = pd.cut(built["provision_strong"].fillna(0),
                         bins=[-0.01, 0.0001, 0.25, 0.5, 0.75, 1.0],
                         labels=["0", "0–0,25", "0,25–0,5", "0,5–0,75", "0,75–1"]).value_counts().sort_index()
 fsi_hist = pd.cut(built["fsi"], bins=[0, 0.5, 1, 1.5, 2, 3, 5, 100],
                   labels=["<0,5", "0,5–1", "1–1,5", "1,5–2", "2–3", "3–5", ">5"]).value_counts().sort_index()
+
+# Распределение спроса на школьные места (сумма по району, оценка)
+demand_parts = [("Спрос (дети)", "demand"), ("Мест в школах", "capacity"), ("Покрыт в пределах 15 мин", "demand_within"),
+                ("Покрыт дальше 15 мин", "demand_without"), ("Не покрыт (нехватка)", "demand_left"),
+                ("Свободных мест (остаток)", "capacity_left")]
+demand_parts = [(lbl, col) for lbl, col in demand_parts if col in blocks.columns]
+
+# Характеристики групп Spacematrix (медианы по застроенным кварталам каждой группы)
+sm = built[~built["spacematrix"].astype(str).isin(NO_MORPH)]
+sm_groups = (sm.groupby(sm["spacematrix"].astype(str))
+               .agg(blocks=("fsi", "size"), population=("population", "sum"), fsi=("fsi", "median"),
+                    gsi=("gsi", "median"), l=("l", "median"), mxi=("mxi", "median"))
+               .sort_values("blocks", ascending=False))
+sm_rows = "".join(
+    f"<tr><td>{name}</td><td>{int(r.blocks)}</td><td>{ru(int(r.population))}</td><td>{r.fsi:.2f}</td>"
+    f"<td>{r.gsi:.2f}</td><td>{r.l:.1f}</td><td>{r.mxi:.2f}</td></tr>"
+    for name, r in sm_groups.iterrows()
+)
+legend_html = "".join(
+    f"<div style='margin-bottom:8px'><b>{name}</b><br>" + " ".join(
+        f"<span style='display:inline-block;margin:2px 10px 2px 0'><i style='display:inline-block;width:12px;"
+        f"height:12px;background:{col};margin-right:4px;vertical-align:-1px'></i>{cat}</span>"
+        for cat, col in colors.items()) + "</div>"
+    for name, colors in morph_legends.items()
+)
 
 charts = {
     "land_use": {"labels": lu_labels, "osm": lu_osm, "estimate": lu_est},
@@ -194,6 +246,8 @@ charts = {
     "strelka": {"labels": list(st_counts.index), "values": [int(v) for v in st_counts.values]},
     "provision": {"labels": [str(x) for x in provision_bins.index], "values": [int(v) for v in provision_bins.values]},
     "fsi": {"labels": [str(x) for x in fsi_hist.index], "values": [int(v) for v in fsi_hist.values]},
+    "demand": {"labels": [lbl for lbl, _ in demand_parts],
+               "values": [int(blocks[col].fillna(0).sum()) for _, col in demand_parts]},
 }
 
 top = built.sort_values("population", ascending=False).head(10)[
@@ -311,6 +365,25 @@ page = f"""<!DOCTYPE html>
     <div class="card"><canvas id="fsi" height="220"></canvas></div>
     <div class="card"><canvas id="spacematrix" height="220"></canvas></div>
     <div class="card"><canvas id="strelka" height="220"></canvas></div>
+    <div class="card"><canvas id="demand" height="220"></canvas>
+      <div class="note" style="font-size:12px">Распределение спроса моделью <code>competitive_provision</code>:
+      норматив 120 мест на 1000 жителей, доступность 15 минут пешком. Вместимость школ — оценка (250 мест на школу).</div></div>
+  </div>
+
+  <div class="card">
+    <h3>Цвета слоёв морфотипов на карте</h3>
+    {legend_html}
+  </div>
+
+  <div class="card">
+    <h3>Характеристики групп Spacematrix</h3>
+    <table>
+      <thead><tr><th>Группа</th><th>Кварталов</th><th>Население (оценка)</th><th>FSI, медиана</th>
+      <th>GSI, медиана</th><th>L, этажей</th><th>MXI, медиана</th></tr></thead>
+      <tbody>{sm_rows}</tbody>
+    </table>
+    <div class="note" style="margin-top:12px;font-size:13px">FSI — площадь этажей / площадь квартала, GSI — доля
+    застроенной земли, L — средняя этажность, MXI — доля жилой площади. Медианы по застроенным кварталам группы.</div>
   </div>
 
   <div class="card">
@@ -369,6 +442,7 @@ draw('provision', 'Обеспеченность школами (доля пок�
 draw('fsi', 'Распределение FSI по застроенным кварталам', DATA.fsi, false);
 draw('spacematrix', 'Морфотипы Spacematrix', DATA.spacematrix, true);
 draw('strelka', 'Морфотипы «Стрелки»', DATA.strelka, true);
+draw('demand', 'Распределение спроса на школьные места (оценка), мест', DATA.demand, true);
 </script>
 </body>
 </html>
