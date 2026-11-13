@@ -1,0 +1,9 @@
+{
+  "solver": "HiGHS 1.15.4 WebAssembly",
+  "baseline_all_10_indicators_all_1039_blocks": true,
+  "python_reference_scenarios": 10,
+  "all_indicators_match_for_references": true,
+  "exhaustive_600_variants_match_python": 1039,
+  "invalid_inputs_rejected": true,
+  "scenarios_independent": true
+}

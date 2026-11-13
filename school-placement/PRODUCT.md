@@ -22,6 +22,9 @@ web
 Для тайлов нужен интернет; локальные расчёты от подложки не зависят.
 Выбор квартала не подтверждает наличие участка или возможность строительства школы.
 
+Публичная версия по запросу пользователя: GitHub Pages в форке mfthesun/urban-ai-practice,
+все расчёты локально в браузере через HiGHS WebAssembly, без внешнего backend.
+
 ## Evidence on Hand
 ../data/blocks_metrics.geojson, ../notebooks/practice2_barcelona.ipynb, ../dashboard.py.
 Население и вместимость существующих школ — модельные оценки.

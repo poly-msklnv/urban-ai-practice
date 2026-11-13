@@ -14,6 +14,7 @@ function setBusy(value) {
   $('autoCapacity').disabled = busy;
 }
 async function post(url, body) {
+  if (window.schoolBackend) return window.schoolBackend.post(url, body);
   const response = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
   if (!response.ok) throw new Error((await response.json()).error || 'Не удалось выполнить запрос.');
   return response;
@@ -232,7 +233,7 @@ $('zoomIn').onclick = () => map.zoomIn(); $('zoomOut').onclick = () => map.zoomO
 $('mapReset').onclick = () => map.fitBounds(fullBounds.pad(0.08), {animate: false});
 (async () => {
   try {
-    const response = await fetch('/api/data'); if (!response.ok) throw new Error('Не удалось загрузить данные.');
+    const response = window.schoolBackend ? await window.schoolBackend.get() : await fetch('/api/data'); if (!response.ok) throw new Error('Не удалось загрузить данные.');
     const data = await response.json(); ready = data.ready; initial = data.baseline; current = structuredClone(initial);
     initMap(data.geometry.features); $('progress').max = initial.rows.length;
     for (const r of initial.rows) { const option = document.createElement('option'); option.value = r.block_id; option.textContent = `Квартал ${r.block_id}`; $('block').append(option); }
