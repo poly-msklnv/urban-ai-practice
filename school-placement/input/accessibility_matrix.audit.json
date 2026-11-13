@@ -1,0 +1,27 @@
+{
+  "created_utc": "2026-11-13T19:43:15.666794+00:00",
+  "blocks": 1039,
+  "method": "competitive_provision",
+  "blocksnet": "1.0.0a9",
+  "iduedu": "0.4.1",
+  "numpy": "2.2.6",
+  "pulp": "2.7.0",
+  "accessibility_min": 15,
+  "demand_per_1000": 120,
+  "self_supply": true,
+  "max_depth": 1,
+  "blocks_sha256": "8db2b749197d58e6e070cd1d22159c17c1fc843df706a5d1f18fcc135747c32e",
+  "matrix_sha256": "60083031209539843a7c8eb88793a6d5e1e15c732c7437dc0fdd03cd2ba44f22",
+  "saved_deficit": 23353,
+  "recalculated_deficit": 23353,
+  "exact_baseline": true,
+  "differences": [],
+  "id_rule": "0-based feature order in blocks_metrics.geojson; not stale intermediate layers",
+  "origin": {
+    "kind": "historical_osm",
+    "timestamp_utc": "2026-10-20T21:00:00Z",
+    "overpass_osm_base": "2026-11-13",
+    "walk_speed_m_per_min": 83.3333,
+    "note": "Snapshot date selected from original notebook execution; all saved school provision columns match exactly."
+  }
+}

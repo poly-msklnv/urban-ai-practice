@@ -1,0 +1,56 @@
+{
+  "comparison": "OSM 2026-10-20T21:00:00Z vs 2026-11-13T19:30:04Z; same software and blocks",
+  "historical_edges": 21724,
+  "current_edges": 21256,
+  "differences": [
+    {
+      "block_id": 126,
+      "historical_deficit": 203,
+      "current_deficit": 220
+    },
+    {
+      "block_id": 153,
+      "historical_deficit": 112,
+      "current_deficit": 95
+    }
+  ],
+  "time_changes": [
+    {
+      "demand_block": 126,
+      "school_block": 220,
+      "historical_min": 11.5625,
+      "current_min": 11.58
+    },
+    {
+      "demand_block": 126,
+      "school_block": 435,
+      "historical_min": 12.859375,
+      "current_min": 12.86
+    },
+    {
+      "demand_block": 153,
+      "school_block": 220,
+      "historical_min": 12.5390625,
+      "current_min": 12.52
+    },
+    {
+      "demand_block": 153,
+      "school_block": 435,
+      "historical_min": 9.53125,
+      "current_min": 9.53
+    }
+  ],
+  "controls": {
+    "same_blocks_population_capacity_and_software": true,
+    "csv_float64_mismatched_blocks": [
+      126,
+      153
+    ],
+    "recast_to_original_float16_mismatched_blocks": [
+      126,
+      153
+    ],
+    "historical_matrix_all_10_indicators_equal_all_1039_blocks": true
+  },
+  "time_changes_note": "Current CSV decimal values shown; recasting to float16 also leaves the same 17-seat mismatch."
+}
