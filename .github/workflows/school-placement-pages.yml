@@ -2,7 +2,7 @@ name: School placement Pages
 
 on:
   push:
-    branches: [main, feat/practice3-school-placement]
+    branches: [main]
     paths: ["school-placement/**", "tests/test_pages_model.mjs", ".github/workflows/school-placement-pages.yml"]
   workflow_dispatch:
 
@@ -17,8 +17,7 @@ concurrency:
 
 jobs:
   build:
-    # This preview belongs to Denis's fork; the upstream documentation deployment is unchanged.
-    if: github.repository == 'mfthesun/urban-ai-practice'
+    if: github.repository == 'poly-msklnv/urban-ai-practice'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,12 +31,13 @@ jobs:
         with:
           path: dist/school-placement
   deploy:
-    if: github.repository == 'mfthesun/urban-ai-practice'
+    if: github.repository == 'poly-msklnv/urban-ai-practice'
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/configure-pages@v5
       - uses: actions/deploy-pages@v4
         id: deployment

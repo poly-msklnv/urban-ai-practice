@@ -32,7 +32,7 @@
 
 ## Практика 3: размещение школ
 
-**[Открыть приложение на GitHub Pages](https://mfthesun.github.io/urban-ai-practice/)** —
+**[Открыть приложение на GitHub Pages](https://poly-msklnv.github.io/urban-ai-practice/)** —
 ручные сценарии и расчёты прямо в браузере, без установки Python.
 
 Отдельное локальное приложение — [`school-placement/`](school-placement/README.md).

@@ -8,7 +8,7 @@
 
 ## Публичная версия на GitHub Pages
 
-**https://mfthesun.github.io/urban-ai-practice/**
+**https://poly-msklnv.github.io/urban-ai-practice/**
 
 Полное приложение открывается без Python-сервера: ручные школы произвольной целой
 вместимости, несколько кварталов, автоматический перебор, карта Esri, сравнение и CSV.
@@ -39,8 +39,10 @@ python -m http.server 8767 --directory dist/school-placement
 
 Сборка находится в игнорируемом Git каталогe `dist/school-placement/`.
 Workflow `.github/workflows/school-placement-pages.yml` собирает и проверяет модель перед
-публикацией. Развёртывание ограничено форком `mfthesun/urban-ai-practice`; документация
-и настройки Pages исходного репозитория не меняются.
+публикацией. Развёртывание выполняется из `main` основного репозитория
+`poly-msklnv/urban-ai-practice`. В Settings → Pages должен быть выбран источник
+GitHub Actions (первичное включение требует владельца/администратора). Документация
+Sphinx продолжает собираться отдельно; публичный корень Pages занимает приложение.
 
 ## Запуск
 
