@@ -131,6 +131,9 @@ def test_http_calculate_search_and_missing_matrix(example, monkeypatch):
     try:
         data = json.load(urlopen(base + "/api/data"))
         assert data["ready"] and len(data["geometry"]["features"]) == 4
+        assert data["geometry_crs"] == "EPSG:4326"
+        lon, lat = data["geometry"]["features"][0]["geometry"]["coordinates"][0][0]
+        assert -180 <= lon <= 180 and -90 <= lat <= 90
         result = json.load(post("/api/calculate", {"placements": [{"block_id": 0, "capacity": 240}]}))
         assert sum(r["deficit"] for r in result["rows"]) == result["summary"]["deficit"]
         with pytest.raises(HTTPError) as exc:

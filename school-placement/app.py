@@ -23,7 +23,7 @@ def make_server(host="127.0.0.1", port=8765, matrix_path=MATRIX):
         )
     # Просмотр исходных данных доступен даже при отсутствующей матрице. Это не воспроизведение расчёта.
     baseline = model.payload(model.baseline) if model else result_payload(blocks, blocks, blocks)
-    geometry = json.loads(blocks[["geometry"]].to_json())
+    geometry = json.loads(blocks[["geometry"]].to_crs(4326).to_json())
     for feature, block_id in zip(geometry["features"], blocks.index):
         feature["properties"] = {"block_id": int(block_id)}
     busy = threading.Lock()
@@ -41,8 +41,9 @@ def make_server(host="127.0.0.1", port=8765, matrix_path=MATRIX):
         def do_GET(self):
             if self.path == "/api/data":
                 self.send_json({"ready": model is not None, "error": error,
-                                "geometry": geometry, "baseline": baseline})
-            elif self.path in ("/", "/index.html", "/style.css", "/main.js"):
+                                "geometry": geometry, "baseline": baseline, "geometry_crs": "EPSG:4326"})
+            elif self.path in ("/", "/index.html", "/style.css", "/main.js",
+                               "/vendor/leaflet/leaflet.js", "/vendor/leaflet/leaflet.css"):
                 name = "index.html" if self.path == "/" else self.path[1:]
                 body = (HERE / name).read_bytes()
                 self.send_response(200)

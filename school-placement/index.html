@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Школы Eixample — сравнение размещения</title>
-<link rel="stylesheet" href="style.css"><script src="main.js" defer></script>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css"><link rel="stylesheet" href="style.css">
+<script src="vendor/leaflet/leaflet.js" defer></script><script src="main.js" defer></script>
 </head>
 <body>
 <header><h1>Где разместить школу в Eixample</h1>
@@ -46,12 +47,12 @@
 <option value="base">Исходное состояние</option><option value="scenario">Сценарий</option><option value="change">Изменение</option>
 </select></div>
 <div class="mapWrap">
-<svg id="map" role="img" aria-label="Карта кварталов Eixample. Для выбора с клавиатуры используйте список кварталов."></svg>
+<div id="map" role="region" aria-label="Карта кварталов Eixample на подложке Esri. Для выбора с клавиатуры используйте список кварталов."></div>
 <div class="mapTools"><button id="zoomIn" aria-label="Приблизить карту">+</button><button id="zoomOut" aria-label="Отдалить карту">−</button><button id="mapReset">Вся территория</button></div>
 <span class="north" aria-label="Север вверху">С ↑</span>
 <div class="legend" id="legend"></div>
 </div>
-<p class="mapCaption">Расчётные кварталы · UTM 31N · север вверху · <span class="mapScale"><span id="scaleLine" aria-hidden="true"></span><span id="scale"></span></span></p>
+<p class="mapCaption">Подложка Esri World Light Gray · Web Mercator · север вверху · <span id="tileStatus" role="status">Загрузка подложки…</span></p>
 <div id="blockCard" aria-live="polite"></div>
 </section>
 </div>

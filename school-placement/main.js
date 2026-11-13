@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 const fmt = n => n === null || n === undefined ? '—' : new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 1}).format(n);
 const pct = n => n === null ? '—' : fmt(n * 100);
 let initial, current, draft = [], applied = [], selected = 0, ready = false, busy = false;
-let variants = [], searchCapacity = null, saved = [], fullBox, viewBox, paths = new Map();
+let variants = [], searchCapacity = null, saved = [], map, fullBounds, paths = new Map();
 const controls = ['add', 'calculate', 'reset', 'search', 'save'];
 function message(text, ok = false) { $('notice').textContent = text; $('notice').classList.toggle('ok', ok); }
 function setBusy(value) {
@@ -57,10 +57,7 @@ function selectBlock(id, zoom = false) {
     dt.textContent = label; dd.textContent = val; div.append(dt, dd); dl.append(div);
   });
   $('blockCard').append(dl);
-  if (zoom) {
-    const box = paths.get(id).getBBox(), w = fullBox[2] / 2, h = fullBox[3] / 2;
-    viewBox = [box.x + box.width / 2 - w / 2, box.y + box.height / 2 - h / 2, w, h]; setView();
-  }
+  if (zoom) map.fitBounds(paths.get(id).getBounds().pad(3), {maxZoom: 17, animate: false});
   document.querySelectorAll('#rows tr').forEach(tr => tr.classList.toggle('active', Number(tr.dataset.id) === id));
   drawMap();
 }
@@ -76,10 +73,10 @@ function drawMap() {
     const path = paths.get(r.block_id); if (!path) continue;
     const value = mode === 'base' ? r.provision_base : change
       ? (r.provision === null || r.provision_base === null ? null : r.provision - r.provision_base) : r.provision;
-    path.setAttribute('fill', color(value, change));
-    path.classList.toggle('selected', r.block_id === selected);
-    path.classList.toggle('planned', applied.some(p => p.block_id === r.block_id));
-    path.firstChild.textContent = `Квартал ${r.block_id}: ${change ? 'изменение' : 'обеспеченность'} ${pct(value)} ${change ? 'п. п.' : '%'}`;
+    path.setStyle({fillColor: color(value, change)});
+    path.getElement()?.classList.toggle('selected', r.block_id === selected);
+    path.getElement()?.classList.toggle('planned', applied.some(p => p.block_id === r.block_id));
+    path.setTooltipContent(`Квартал ${r.block_id}: ${change ? 'изменение' : 'обеспеченность'} ${pct(value)} ${change ? 'п. п.' : '%'}`);
   }
   $('legend').replaceChildren(document.createTextNode(change ? 'Изменение, п. п.' : 'Обеспеченность, %'));
   const entries = change ? [['#c97730', 'снижение'], ['#edf1f5', 'без изменений'], ['#3476ae', 'рост']]
@@ -88,35 +85,29 @@ function drawMap() {
   entries.forEach(([c, text]) => { const i = document.createElement('i'); i.style.background = c; $('legend').append(i, document.createTextNode(text)); });
   const contours = document.createElement('div'); contours.textContent = 'Чёрный контур: выбранный квартал · пунктир: новая школа'; $('legend').append(contours);
 }
-function setView() {
-  $('map').setAttribute('viewBox', viewBox.join(' '));
-  updateScale();
-}
-function updateScale() {
-  if (!viewBox) return;
-  const pixelsPerMeter = Math.min($('map').clientWidth / viewBox[2], $('map').clientHeight / viewBox[3]);
-  const meters = [50, 100, 200, 500, 1000].filter(n => n * pixelsPerMeter <= 150).pop() || 50;
-  $('scaleLine').style.width = `${meters * pixelsPerMeter}px`;
-  $('scale').textContent = `${fmt(meters)} м`;
-}
-window.addEventListener('resize', updateScale);
 function initMap(features) {
-  const ns = 'http://www.w3.org/2000/svg', xs = [], ys = [];
-  for (const f of features) {
-    const path = document.createElementNS(ns, 'path'), title = document.createElementNS(ns, 'title');
-    const polygons = f.geometry.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry.coordinates;
-    let d = '';
-    for (const polygon of polygons) for (const ring of polygon) {
-      d += ring.map(([x, y], i) => { xs.push(x); ys.push(-y); return `${i ? 'L' : 'M'}${x},${-y}`; }).join(' ') + 'Z';
+  map = L.map('map', {zoomControl: false, scrollWheelZoom: false});
+  const tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri, HERE, Garmin, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, GIS user community',
+    maxNativeZoom: 16, maxZoom: 19
+  });
+  let tileErrors = 0;
+  tiles.on('loading', () => { tileErrors = 0; $('tileStatus').textContent = 'Загрузка подложки…'; });
+  tiles.on('tileerror', () => { tileErrors++; });
+  tiles.on('load', () => { $('tileStatus').textContent = tileErrors
+    ? 'Часть подложки недоступна. Проверьте интернет; расчёты доступны.' : 'Подложка загружена'; });
+  tiles.addTo(map);
+  const quarters = L.geoJSON({type: 'FeatureCollection', features}, {
+    style: {color: '#707d85', weight: 0.5, fillOpacity: 0.6},
+    onEachFeature: (feature, layer) => {
+      paths.set(feature.properties.block_id, layer);
+      layer.bindTooltip(`Квартал ${feature.properties.block_id}`);
+      layer.on('click', () => selectBlock(feature.properties.block_id));
     }
-    path.setAttribute('d', d); path.setAttribute('fill-rule', 'evenodd'); path.append(title);
-    path.onclick = () => selectBlock(f.properties.block_id);
-    paths.set(f.properties.block_id, path); $('map').append(path);
-  }
-  const minX = xs.reduce((a,b) => Math.min(a,b), Infinity), maxX = xs.reduce((a,b) => Math.max(a,b), -Infinity);
-  const minY = ys.reduce((a,b) => Math.min(a,b), Infinity), maxY = ys.reduce((a,b) => Math.max(a,b), -Infinity);
-  const pad = 130; fullBox = [minX - pad, minY - pad, maxX - minX + 2 * pad, maxY - minY + 2 * pad];
-  viewBox = [...fullBox]; setView();
+  }).addTo(map);
+  fullBounds = quarters.getBounds();
+  map.fitBounds(fullBounds.pad(0.08), {animate: false});
+  L.control.scale({imperial: false, maxWidth: 130}).addTo(map);
 }
 function render() {
   const s = current.summary;
@@ -221,7 +212,7 @@ $('reset').onclick = () => {
   current = structuredClone(initial); draft = []; applied = []; selected = 0; $('mode').value = 'base';
   variants = []; searchCapacity = null; $('ranking').replaceChildren(); $('exportSearch').disabled = true;
   $('progress').value = 0; $('searchStatus').textContent = 'Поиск ещё не запускался.';
-  $('rankingNote').textContent = 'Результаты появятся после поиска.'; viewBox = [...fullBox]; setView(); render();
+  $('rankingNote').textContent = 'Результаты появятся после поиска.'; map.fitBounds(fullBounds.pad(0.08), {animate: false}); render();
   message('Изменения сброшены. Показано исходное состояние.', true);
 };
 $('mode').onchange = drawMap;
@@ -237,12 +228,8 @@ $('export').onclick = () => download('school-placement.csv',
     r.provision_base === null ? '' : r.provision_base * 100, r.provision === null ? '' : r.provision * 100]));
 $('exportSearch').onclick = () => download('school-placement-search.csv', ['Квартал', 'Новая школа, мест', 'Дефицит, мест', 'Сокращение, мест', 'Ошибка'],
   variants.map(v => [v.block_id, searchCapacity, v.deficit, v.reduction, v.error]));
-function zoom(factor) {
-  const [x, y, w, h] = viewBox; if (w * factor < fullBox[2] / 16 || w * factor > fullBox[2] * 1.01) return;
-  viewBox = [x + w * (1 - factor) / 2, y + h * (1 - factor) / 2, w * factor, h * factor]; setView();
-}
-$('zoomIn').onclick = () => zoom(0.75); $('zoomOut').onclick = () => zoom(1 / 0.75);
-$('mapReset').onclick = () => { viewBox = [...fullBox]; setView(); };
+$('zoomIn').onclick = () => map.zoomIn(); $('zoomOut').onclick = () => map.zoomOut();
+$('mapReset').onclick = () => map.fitBounds(fullBounds.pad(0.08), {animate: false});
 (async () => {
   try {
     const response = await fetch('/api/data'); if (!response.ok) throw new Error('Не удалось загрузить данные.');

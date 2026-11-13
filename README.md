@@ -43,6 +43,7 @@ python school-placement/app.py
 # открыть http://127.0.0.1:8765
 ```
 
+[Видео демонстрации, 1:33](school-placement/demo/school-placement-demo.mp4) ·
 [Эксперимент 600 и 2×300 мест](school-placement/results/REPORT.md) ·
 [Диагностика и исправление расхождения 17 мест](school-placement/README.md#почему-первоначально-разошлись-17-мест).
 

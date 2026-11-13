@@ -1,0 +1,39 @@
+{
+  "browser": "156.0.8078.73",
+  "mode": "headless on remote server",
+  "viewports_px": [
+    390,
+    768,
+    1440
+  ],
+  "python_tests_passed": 21,
+  "automatic_variants_checked": 1039,
+  "javascript_errors": [],
+  "checks": [
+    "baseline reproduction",
+    "manual A/B",
+    "capacity validation 0/-1/1.5",
+    "draft vs calculated state",
+    "save/open scenarios",
+    "CSV results and ranking:1040 rows each",
+    "reset",
+    "all 1039 equal best variants",
+    "select automatic ranking variant",
+    "map/list synchronization by click and keyboard",
+    "Leaflet Esri tiles:42 successful in initial acceptance",
+    "zoom/reset",
+    "Esri unavailable:explicit warning with calculations still enabled",
+    "mobile scale and attribution do not overlap",
+    "no document overflow at 390/768/1440"
+  ],
+  "unverified": [
+    "physical iPhone",
+    "Safari",
+    "screen reader"
+  ],
+  "screenshots": [
+    "../screenshots/desktop-esri.png",
+    "../screenshots/mobile-esri.png"
+  ],
+  "video": "../demo/school-placement-demo.mp4"
+}

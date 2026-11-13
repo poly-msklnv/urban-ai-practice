@@ -1,0 +1,81 @@
+// Optional browser acceptance; start the app first. See school-placement/README.md.
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises');
+const out=process.env.SCREENSHOT_DIR || require('node:path').join(require('node:os').tmpdir(), 'school-browser-review');
+const baseURL=process.env.SCHOOL_APP_URL || 'http://127.0.0.1:8765';
+(async()=>{
+ await fs.mkdir(out,{recursive:true});
+ const browser=await chromium.launch({executablePath:process.env.CHROME_PATH || undefined,headless:true});
+ const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
+ const page=await context.newPage(); const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(baseURL);
+ await page.waitForFunction(()=>document.querySelector('#rows').children.length===1039);
+ await page.screenshot({path:out+'/desktop.png',fullPage:true});
+ assert.equal(await page.locator('#map .leaflet-overlay-pane path').count(),1039);
+ assert.equal((await page.locator('#deficit').innerText()).replace(/\s/g,''),'23353');
+ await page.waitForFunction(()=>document.querySelector('#tileStatus').textContent==='Подложка загружена',null,{timeout:60000});
+ assert(await page.locator('#map img.leaflet-tile-loaded').count()>0);
+ for(const bad of ['0','-1','1.5']) {
+  await page.locator('#capacity').fill(bad);await page.locator('#add').click();
+  assert.equal(await page.locator('#placements button').count(),0);
+ }
+ await page.locator('#block').selectOption('766');await page.locator('#capacity').fill('600');await page.locator('#add').click();
+ assert.match(await page.locator('#dirty').innerText(),/нерассчитанные/);
+ await page.locator('#calculate').click();await page.waitForFunction(()=>document.querySelector('#added').textContent==='600');
+ assert.equal((await page.locator('#deficit').innerText()).replace(/\s/g,''),'22753');
+ assert.equal(await page.locator('#map path.planned').count(),1);
+ const row=page.locator('#rows tr[data-id="766"]');assert.equal(await row.locator('td').nth(4).innerText(),'600');
+ await page.locator('#mode').selectOption('change');assert.match(await page.locator('#legend').innerText(),/Изменение/);
+ await page.locator('#scenarioName').fill('А: 600');await page.locator('#save').click();assert.equal(await page.locator('#saved tr').count(),2);
+ const downloadPromise=page.waitForEvent('download');await page.locator('#export').click();const download=await downloadPromise;
+ const file=await download.path(), csv=await fs.readFile(file,'utf8');assert.equal(csv.trim().split('\r\n').length,1040);
+ await page.locator('#reset').click();assert.equal((await page.locator('#deficit').innerText()).replace(/\s/g,''),'23353');
+ assert.equal(await page.locator('#map path.planned').count(),0);assert.equal(await page.locator('#saved tr').count(),2);
+ await page.locator('#saved tr').nth(1).getByRole('button',{name:'Открыть'}).click();assert.equal(await page.locator('#added').innerText(),'600');
+ await page.locator('#reset').click();
+ for(const id of ['766','92']) {await page.locator('#block').selectOption(id);await page.locator('#capacity').fill('300');await page.locator('#add').click();}
+ await page.locator('#calculate').click();await page.waitForFunction(()=>document.querySelector('#added').textContent==='600');
+ assert.equal(await page.locator('#map path.planned').count(),2);
+ assert.equal((await page.locator('#deficit').innerText()).replace(/\s/g,''),'22753');
+ await page.screenshot({path:out+'/desktop-scenario.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});await page.evaluate(()=>window.scrollTo(0,0));
+ await page.screenshot({path:out+'/mobile.png',fullPage:true});
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ const scale=await page.locator('.leaflet-control-scale').boundingBox(), attribution=await page.locator('.leaflet-control-attribution').boundingBox();
+ assert(scale.x+scale.width<=attribution.x, 'Scale must not overlap attribution on mobile');
+ await page.setViewportSize({width:768,height:1024});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ await page.setViewportSize({width:1440,height:1000});
+ console.log('Manual scenarios, CSV, save/open, reset, validation, 390/768/1440 widths: PASS');
+ await page.locator('#autoCapacity').fill('600');await page.locator('#search').click();
+ await page.waitForFunction(()=>Number(document.querySelector('#progress').value)>0);
+ console.log('Real browser exhaustive search started');
+ for(let i=0;i<60;i++) {
+  if(await page.locator('#ranking tr').count()===1039)break;
+  await page.waitForTimeout(10000);
+  if(i%5===0)console.log(await page.locator('#searchStatus').innerText());
+ }
+ assert.equal(await page.locator('#ranking tr').count(),1039);
+ await page.waitForFunction(()=>document.querySelector('#calculate').disabled===false);
+ assert.match(await page.locator('#rankingNote').innerText(),/Проверены все 1039/);
+ assert.equal(await page.locator('#ranking tr').filter({hasText:'Лучший результат'}).count(),1039);
+ assert.equal((await page.locator('#deficit').innerText()).replace(/\s/g,''),'22753');
+ const rankingCSV=page.waitForEvent('download');await page.locator('#exportSearch').click();
+ const exported=await rankingCSV; assert.equal((await fs.readFile(await exported.path(),'utf8')).trim().split('\r\n').length,1040);
+ await page.locator('#ranking tr').nth(92).getByRole('button',{name:'Показать'}).click();
+ await page.waitForFunction(()=>document.querySelector('#calculate').disabled===false);
+ assert.equal(await page.locator('#block').inputValue(),'92');assert.match(await page.locator('#blockCard').innerText(),/Квартал 92/);
+ assert.equal(await page.locator('#map path.selected.planned').count(),1);
+ await page.locator('#reset').click();assert.equal(await page.locator('#ranking tr').count(),0);
+ assert.equal(await page.locator('#progress').getAttribute('value'),'0');
+ const offlineContext=await browser.newContext({viewport:{width:390,height:844}});
+ await offlineContext.route('**/MapServer/tile/**',r=>r.abort());
+ const offline=await offlineContext.newPage();await offline.goto(baseURL);
+ await offline.waitForFunction(()=>document.querySelector('#tileStatus').textContent.includes('недоступна'));
+ assert(await offline.locator('#calculate').isEnabled());assert.equal(await offline.locator('#rows tr').count(),1039);
+ await offlineContext.close();
+ assert.deepEqual(errors,[]);
+ await fs.writeFile(out+'/result.json',JSON.stringify({browser:await browser.version(),widths:[390,768,1440],rows:1039,automatic:1039,errors,checks:'manual A/B, draft, validation, save/open, reset, map/table, CSV x2, full automatic search, variant selection'},null,2));
+ console.log('All browser checks: PASS');await browser.close();
+})().catch(e=>{console.error(e);process.exit(1)});
