@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Школы Eixample — сравнение размещения</title>
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css"><link rel="stylesheet" href="style.css">
+<script src="vendor/leaflet/leaflet.js" defer></script><script src="main.js" defer></script>
+</head>
+<body>
+<header><h1>Где разместить школу в Eixample</h1>
+<p>Сравните варианты по сокращению дефицита мест в пределах 15 минут пешком.</p></header>
+<main>
+<div id="notice" role="status" aria-live="polite">Загружаем кварталы и проверяем исходный расчёт…</div>
+<dl class="totals" aria-label="Итоги текущего расчёта">
+<div><dt>Добавлено мест</dt><dd id="added">—</dd></div>
+<div><dt>Вместимость сети, мест</dt><dd id="totalCapacity">—</dd></div>
+<div><dt>Остаточный дефицит, мест</dt><dd id="deficit">—</dd></div>
+<div><dt>Сокращение дефицита, мест</dt><dd id="reduction">—</dd></div>
+</dl>
+<div class="workspace">
+<aside>
+<section><h2>Ручной сценарий</h2>
+<p class="muted">Выберите квартал на карте или в списке. Можно добавить несколько школ, в том числе в одном квартале.</p>
+<form id="addForm">
+<label for="block">Квартал</label><select id="block" required></select>
+<label for="capacity">Вместимость новой школы, мест</label>
+<input id="capacity" type="number" min="1" step="1" value="600" required>
+<button id="add" type="submit" disabled>Добавить школу</button>
+</form>
+<ul id="placements" class="placements"><li>Новые школы не добавлены.</li></ul>
+<button id="calculate" class="primary" disabled>Рассчитать сценарий</button>
+<button id="reset" disabled>Сбросить изменения</button>
+<p id="dirty" class="muted">Карта и таблица: исходное состояние.</p>
+</section>
+<section><h2>Автоматический подбор</h2>
+<p class="muted">Одна школа; независимая проверка каждого квартала. Одинаковые лучшие результаты показываем все.</p>
+<label for="autoCapacity">Вместимость новой школы, мест</label>
+<input id="autoCapacity" type="number" min="1" step="1" value="600" required>
+<button id="search" class="primary" disabled>Разместить автоматически</button>
+<progress id="progress" value="0" max="1039" aria-label="Ход перебора"></progress>
+<p id="searchStatus" role="status" aria-live="polite">Поиск ещё не запускался.</p>
+</section>
+</aside>
+<section class="mapSection" aria-labelledby="mapTitle">
+<div class="mapHeading"><h2 id="mapTitle">Обеспеченность по кварталам</h2>
+<label for="mode" class="sr-only">Режим карты</label><select id="mode">
+<option value="base">Исходное состояние</option><option value="scenario">Сценарий</option><option value="change">Изменение</option>
+</select></div>
+<div class="mapWrap">
+<div id="map" role="region" aria-label="Карта кварталов Eixample на подложке Esri. Для выбора с клавиатуры используйте список кварталов."></div>
+<div class="mapTools"><button id="zoomIn" aria-label="Приблизить карту">+</button><button id="zoomOut" aria-label="Отдалить карту">−</button><button id="mapReset">Вся территория</button></div>
+<span class="north" aria-label="Север вверху">С ↑</span>
+<div class="legend" id="legend"></div>
+</div>
+<p class="mapCaption">Подложка Esri World Light Gray · Web Mercator · север вверху · <span id="tileStatus" role="status">Загрузка подложки…</span></p>
+<div id="blockCard" aria-live="polite"></div>
+</section>
+</div>
+<section class="results"><div class="sectionHeading"><h2>Сравнение по кварталам</h2><button id="export" disabled>Сохранить таблицу CSV</button></div>
+<p class="muted">Дефицит и вместимость — в местах; обеспеченность — доля удовлетворённого спроса, %. «—» означает отсутствие спроса. Изменение дефицита может быть отрицательным из-за перераспределения мест методом BlocksNet.</p>
+<div class="tableScroll" tabindex="0" aria-label="Результаты по кварталам"><table><thead><tr>
+<th scope="col">Квартал</th><th scope="col">Население, чел.</th><th scope="col">Спрос</th><th scope="col">Мест было</th><th scope="col">Мест стало</th><th scope="col">Дефицит был</th><th scope="col">Дефицит стал</th><th scope="col">Сокращение</th><th scope="col">Обеспеченность была, %</th><th scope="col">Стала, %</th>
+</tr></thead><tbody id="rows"></tbody></table></div>
+</section>
+<section class="results"><div class="sectionHeading"><h2>Сохранённые сценарии</h2><div><label for="scenarioName" class="sr-only">Название сценария</label><input id="scenarioName" placeholder="Например, А: одна школа" maxlength="80"><button id="save" disabled>Сохранить сценарий</button></div></div>
+<p class="muted">Сохраняется последний расчёт, а не черновик. Сценарии доступны до перезагрузки страницы; сохраните нужные таблицы в CSV.</p>
+<div class="tableScroll" tabindex="0" aria-label="Сравнение сценариев"><table><thead><tr><th>Название</th><th>Школы: квартал / мест</th><th>Прирост мест</th><th>Дефицит</th><th>Сокращение</th><th>Действие</th></tr></thead><tbody id="saved"></tbody></table></div>
+</section>
+<section class="results"><div class="sectionHeading"><h2>Все варианты автоматического подбора</h2><button id="exportSearch" disabled>Сохранить перебор CSV</button></div>
+<p id="rankingNote">Результаты появятся после поиска. Выбор строки пересчитает и покажет соответствующий вариант.</p>
+<div class="tableScroll" tabindex="0" aria-label="Рейтинг размещения одной школы"><table><thead><tr><th>Квартал</th><th>Дефицит, мест</th><th>Сокращение, мест</th><th>Результат</th><th>Действие</th></tr></thead><tbody id="ranking"></tbody></table></div>
+</section>
+<details><summary>Источники, метод и ограничения</summary>
+<p>Исходные слои — OpenStreetMap, Geofabrik, Cataluna, 19.10.2026; результаты — практика 2 в этом репозитории.
+Население 324 283 человека и 15 750 мест в 63 школах — расчётные оценки BlocksNet, не официальная статистика.
+Вместимость восстановлена по 250 мест на школу. Потребность: ceil(население × 120 / 1000) по каждому кварталу.</p>
+<p>Метод: competitive_provision, BlocksNet 1.0.0a9; 15 минут, self_supply=True, max_depth=1. Сначала учитываются места собственного квартала, затем конкурентное распределение по матрице времени.
+Спрос 39 103, исходный дефицит 23 353 места. Сценарии изменяют только вместимость выбранных кварталов. Критерий перебора — сокращение суммарного demand_left.</p>
+<p>Идентификатор — номер записи GeoJSON (0…1038), как в исходном ноутбуке. Новая матрица OSM может отличаться от исходной; расчёты доступны только после сверки всех сохранённых показателей по кварталам.
+В модели нет школ за границей района, общественного транспорта, уточнённого возраста жителей, реальных мощностей и земельных ограничений.</p>
+<p>Выбор квартала и сравнение обеспеченности не подтверждают наличие участка или возможность строительства. Для этого требуется отдельное градостроительное обоснование.</p>
+<p><a href="https://mvin8.github.io/ai-technologies-in-urbanism/content/practice/practice-03.html">Требования практики 3</a> · <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors, ODbL</a></p>
+</details>
+</main><footer>Учебная модель размещения школ · Barcelona, l’Eixample</footer>
+</body></html>

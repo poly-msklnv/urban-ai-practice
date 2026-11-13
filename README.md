@@ -30,6 +30,26 @@
 | `my_package/`, `tests/`, `docs/` | Шаблон Python-пакета, на котором построен проект |
 | `AGENTS.md` | Инструкции для ИИ-агента по работе с проектом |
 
+## Практика 3: размещение школ
+
+**[Открыть приложение на GitHub Pages](https://poly-msklnv.github.io/urban-ai-practice/)** —
+ручные сценарии и расчёты прямо в браузере, без установки Python.
+
+Отдельное локальное приложение — [`school-placement/`](school-placement/README.md).
+Ручные сценарии, полный перебор размещения одной школы, карта изменений, сравнение и CSV.
+Сохранённая историческая матрица позволяет запускать расчёты без скачивания OSM;
+исходные файлы практики 2 используются только для чтения.
+
+```bash
+python -m pip install -r school-placement/requirements.txt
+python school-placement/app.py
+# открыть http://127.0.0.1:8765
+```
+
+[Видео демонстрации, 1:33](school-placement/demo/school-placement-demo.mp4) ·
+[Эксперимент 600 и 2×300 мест](school-placement/results/REPORT.md) ·
+[Диагностика и исправление расхождения 17 мест](school-placement/README.md#почему-первоначально-разошлись-17-мест).
+
 ## Быстрый старт
 
 ```powershell
